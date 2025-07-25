@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Frete - Orçamento Rápido</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #581c87 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Partículas de fundo */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(147, 51, 234, 0.3);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; animation-delay: 1s; }
+        .particle:nth-child(3) { left: 30%; animation-delay: 2s; }
+        .particle:nth-child(4) { left: 40%; animation-delay: 3s; }
+        .particle:nth-child(5) { left: 50%; animation-delay: 4s; }
+        .particle:nth-child(6) { left: 60%; animation-delay: 5s; }
+        .particle:nth-child(7) { left: 70%; animation-delay: 0.5s; }
+        .particle:nth-child(8) { left: 80%; animation-delay: 1.5s; }
+        .particle:nth-child(9) { left: 90%; animation-delay: 2.5s; }
+
+        /* Container principal */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Tela de autenticação */
+        .auth-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.5), transparent);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            color: white;
+        }
+
+        .auth-title {
+            font-size: 28px;
+            font-weight: 300;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffffff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .auth-subtitle {
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        /* Formulários */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #d1d5db;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            padding-left: 50px;
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            z-index: 2;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 2;
+        }
+
+        .password-toggle:hover {
+            color: white;
+        }
+
+        /* Botões */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: #8b5cf6;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+        }
+
+        .btn-link:hover {
+            color: #a855f7;
+        }
+
+        /* Alertas */
+        .alert {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* App principal */
+        .app-screen {
+            display: none;
+        }
+
+        .app-screen.active {
+            display: block;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+        }
+
+        .app-title {
+            font-size: 48px;
+            font-weight: 300;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffffff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .app-subtitle {
+            color: #9ca3af;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .user-email {
+            color: #60a5fa;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn:hover {
+            background: #b91c1c;
+        }
+
+        /* Tabs */
+        .tabs {
+            margin-bottom: 30px;
+        }
+
+        .tab-list {
+            display: flex;
+            background: rgba(17, 24, 39, 0.8);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+
+        /* Grid layout */
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-2,
+            .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Inputs da calculadora */
+        .calc-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            height: 48px;
+        }
+
+        .calc-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+        }
+
+        /* Resultados */
+        .result-card {
+            text-align: center;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+
+        .result-card.cost {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .result-card.cash {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .result-card.card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: 300;
+            color: white;
+        }
+
+        /* Busca */
+        .search-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .search-btn {
+            padding: 12px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover {
+            background: #2563eb;
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Resultados da busca */
+        .search-results {
+            margin-top: 20px;
+        }
+
+        .product-item {
+            background: rgba(31, 41, 55, 0.8);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-info h5 {
+            color: white;
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .product-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .status-available {
+            color: #10b981;
+        }
+
+        .status-unavailable {
+            color: #ef4444;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* Tabelas */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .table th {
+            background: rgba(31, 41, 55, 0.8);
+            padding: 12px 16px;
+            text-align: left;
+            color: white;
+            font-weight: 500;
+        }
+
+        .table td {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .table tr:nth-child(even) {
+            background: rgba(31, 41, 55, 0.3);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(75, 85, 99, 0.5);
+            color: #d1d5db;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Utilitários */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+
+        .mt-4 {
+            margin-top: 16px;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .gap-2 {
+            gap: 8px;
+        }
+
+        .gap-4 {
+            gap: 16px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .auth-card {
+                padding: 30px 20px;
+            }
+
+            .app-title {
+                font-size: 32px;
+            }
+
+            .logout-btn {
+                position: static;
+                margin-bottom: 20px;
+                width: fit-content;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .search-container {
+                flex-direction: column;
+            }
+
+            .product-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Partículas de fundo -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Tela de Autenticação -->
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-icon">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <h1 class="auth-title" id="authTitle">Bem-vindo de volta</h1>
+                <p class="auth-subtitle" id="authSubtitle">Entre na sua conta para continuar</p>
+            </div>
+
+            <!-- Alertas -->
+            <div id="authAlert" class="hidden"></div>
+
+            <!-- Formulário -->
+            <form id="authForm">
+                <!-- Nome (apenas no cadastro) -->
+                <div class="form-group hidden" id="nameGroup">
+                    <label class="form-label">Nome completo</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="nameInput" class="form-input" placeholder="Seu nome completo">
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="emailInput" class="form-input" placeholder="seu@email.com" required>
+                    </div>
+                </div>
+
+                <!-- Senha -->
+                <div class="form-group">
+                    <label class="form-label">Senha</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="passwordInput" class="form-input" placeholder="Sua senha" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('passwordInput', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirmar senha (apenas no cadastro) -->
+                <div class="form-group hidden" id="confirmPasswordGroup">
+                    <label class="form-label">Confirmar senha</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="confirmPasswordInput" class="form-input" placeholder="Confirme sua senha">
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirmPasswordInput', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botão de submit -->
+                <button type="submit" class="btn btn-primary" id="authSubmitBtn">
+                    <span id="authSubmitText">Entrar</span>
+                </button>
+            </form>
+
+            <!-- Switch entre login/cadastro -->
+            <div class="text-center mt-4">
+                <p class="auth-subtitle" id="switchText">Não tem uma conta?</p>
+                <button type="button" class="btn-link" id="switchBtn" onclick="switchAuthMode()">Criar conta</button>
+            </div>
+
+            <!-- Informações adicionais -->
+            <div class="text-center mt-4" style="padding-top: 20px; border-top: 1px solid rgba(75, 85, 99, 0.3);">
+                <p style="font-size: 12px; color: #6b7280;">
+                    Ao entrar, você concorda com nossos termos de uso
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aplicação Principal -->
+    <div id="appScreen" class="app-screen">
+        <div class="container">
+            <!-- Header -->
+            <div class="app-header">
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sair
+                </button>
+                
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+                    <i class="fas fa-calculator" style="font-size: 32px;"></i>
+                    <h1 class="app-title">Orçamento Rápido</h1>
+                </div>
+                <p class="app-subtitle">Calcule preços de forma simples e rápida</p>
+                <p class="user-info">
+                    Logado como: <span class="user-email" id="userEmail"></span>
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <div class="tab-list">
+                    <button class="tab-button active" onclick="switchTab('calculator')">Calculadora</button>
+                    <button class="tab-button" onclick="switchTab('tips')">Dicas & Tabelas</button>
+                    <button class="tab-button" onclick="switchTab('films')">Películas</button>
+                </div>
+
+                <!-- Tab Calculadora -->
+                <div id="calculatorTab" class="tab-content active">
+                    <div class="grid grid-cols-3" style="gap: 30px;">
+                        <!-- Coluna esquerda - Inputs -->
+                        <div style="grid-column: span 2;">
+                            <!-- Pesquisa de Preços -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-search" style="color: #60a5fa;"></i>
+                                        Pesquisar Valor Médio
+                                        <span class="badge">Local</span>
+                                    </h3>
+                                </div>
+                                
+                                <div class="search-container">
+                                    <input type="text" id="searchInput" class="search-input" 
+                                           placeholder="Ex: a10, a32, iphone 11, display, samsung, motorola..."
+                                           onkeypress="if(event.key==='Enter') searchPrices()">
+                                    <button class="search-btn" onclick="searchPrices()" id="searchBtn">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+
+                                <div id="searchResults" class="search-results hidden"></div>
+                            </div>
+
+                            <!-- Inputs de Cálculo -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-calculator" style="color: #10b981;"></i>
+                                        Parâmetros de Cálculo
+                                    </h3>
+                                </div>
+                                
+                                <div class="grid grid-cols-2">
+                                    <div class="form-group">
+                                        <label class="form-label">Valor da Peça</label>
+                                        <input type="number" id="valorPeca" class="calc-input" value="90" step="0.01" onchange="updateCalculation()">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            Margem de Lucro (%) 
+                                            <span style="color: #60a5fa; font-size: 12px;" id="suggestedMargin">(Sugerido: 70%)</span>
+                                        </label>
+                                        <input type="number" id="margemLucro" class="calc-input" value="70" step="0.1" onchange="updateCalculation()">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Frete</label>
+                                        <input type="number" id="frete" class="calc-input" value="20" step="0.01" onchange="updateCalculation()">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            Mão de Obra 
+                                            <span style="color: #10b981; font-size: 12px;" id="suggestedLabor">(R$ 80-120)</span>
+                                        </label>
+                                        <input type="number" id="maoDeObra" class="calc-input" value="120" step="0.01" onchange="updateCalculation()">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Taxa da Máquina (%)</label>
+                                        <input type="number" id="taxaMaquina" class="calc-input" value="6" step="0.1" onchange="updateCalculation()">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Imposto (%)</label>
+                                        <input type="number" id="imposto" class="calc-input" value="4" step="0.1" onchange="updateCalculation()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna direita - Resultados -->
+                        <div>
+                            <div class="result-card cost">
+                                <div class="result-label">Custo Total</div>
+                                <div class="result-value" id="custoTotal">R$ 0,00</div>
+                            </div>
+
+                            <div class="result-card cash">
+                                <div class="result-label">
+                                    <i class="fas fa-circle" style="color: #10b981; font-size: 8px;"></i>
+                                    À Vista
+                                </div>
+                                <div class="result-value" id="valorVista">R$ 0,00</div>
+                            </div>
+
+                            <div class="result-card card">
+                                <div class="result-label">
+                                    <i class="fas fa-circle" style="color: #3b82f6; font-size: 8px;"></i>
+                                    No Cartão
+                                </div>
+                                <div class="result-value" id="valorCartao">R$ 0,00</div>
+                            </div>
+
+                            <div class="result-card cost">
+                                <div class="result-label">Diferença</div>
+                                <div class="result-value" style="font-size: 18px;" id="diferenca">R$ 0,00</div>
+                            </div>
+
+                            <button class="btn btn-primary mb-4" onclick="generatePDF()">
+                                <i class="fas fa-file-pdf"></i>
+                                Gerar Orçamento PDF
+                            </button>
+
+                            <button class="btn" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);" 
+                                    onclick="window.open('https://www.instagram.com/officialmayconsantos?igsh=MW4wbTZoZG50cXR3Yw==', '_blank')">
+                                <i class="fab fa-instagram"></i>
+                                Seguir no Instagram
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Dicas -->
+                <div id="tipsTab" class="tab-content">
+                    <div class="grid grid-cols-2">
+                        <!-- Tabela de Margem -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-calculator" style="color: #60a5fa;"></i>
+                                    Tabela de Margem por Valor
+                                </h3>
+                            </div>
+                            
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Valor da Tela</th>
+                                        <th>% Margem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="background: rgba(251, 146, 60, 0.1);">
+                                        <td style="color: #fed7aa;">Telas até R$ 100</td>
+                                        <td style="font-weight: bold;">65%</td>
+                                    </tr>
+                                    <tr style="background: rgba(250, 204, 21, 0.1);">
+                                        <td style="color: #fef3c7;">Telas até R$ 200</td>
+                                        <td style="font-weight: bold;">70%</td>
+                                    </tr>
+                                    <tr style="background: rgba(34, 197, 94, 0.1);">
+                                        <td style="color: #bbf7d0;">Telas até R$ 300</td>
+                                        <td style="font-weight: bold;">75%</td>
+                                    </tr>
+                                    <tr style="background: rgba(59, 130, 246, 0.1);">
+                                        <td style="color: #bfdbfe;">Telas até R$ 400</td>
+                                        <td style="font-weight: bold;">80%</td>
+                                    </tr>
+                                    <tr style="background: rgba(147, 51, 234, 0.1);">
+                                        <td style="color: #ddd6fe;">Telas até R$ 500</td>
+                                        <td style="font-weight: bold;">95%</td>
+                                    </tr>
+                                    <tr style="background: rgba(239, 68, 68, 0.1);">
+                                        <td style="color: #fecaca;">Tela acima de R$ 500</td>
+                                        <td style="font-weight: bold;">100%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Dicas de Mão de Obra -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-circle" style="color: #10b981;"></i>
+                                    Dicas de Mão de Obra
+                                </h3>
+                            </div>
+                            
+                            <div style="margin-bottom: 20px; padding: 16px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px;">
+                                <h4 style="color: #93c5fd; margin-bottom: 8px;">💡 Regra Geral</h4>
+                                <p style="color: #d1d5db; font-size: 14px;">
+                                    Considerar mão de obra de acordo com a <strong>complexidade e risco</strong> do aparelho a ser consertado, variando de <strong>R$ 80 a R$ 250</strong>.
+                                </p>
+                            </div>
+
+                            <div style="margin-bottom: 12px; padding: 12px; background: rgba(31, 41, 55, 0.8); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📱 Aparelhos Simples</span>
+                                <span style="color: #10b981; font-weight: bold;">R$ 80 - R$ 120</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 12px; padding: 12px; background: rgba(31, 41, 55, 0.8); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📱 Aparelhos Médios</span>
+                                <span style="color: #fbbf24; font-weight: bold;">R$ 120 - R$ 180</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 20px; padding: 12px; background: rgba(31, 41, 55, 0.8); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📱 Aparelhos Complexos</span>
+                                <span style="color: #ef4444; font-weight: bold;">R$ 180 - R$ 250</span>
+                            </div>
+
+                            <div style="padding: 16px; background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 12px;">
+                                <h4 style="color: #fcd34d; margin-bottom: 8px;">⚠️ Fatores a Considerar</h4>
+                                <ul style="color: #d1d5db; font-size: 14px; list-style: none; padding: 0;">
+                                    <li>• Dificuldade de abertura</li>
+                                    <li>• Risco de quebra</li>
+                                    <li>• Tempo de reparo</li>
+                                    <li>• Valor do aparelho</li>
+                                    <li>• Disponibilidade de peças</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Películas -->
+                <div id="filmsTab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-mobile-alt" style="color: #a855f7;"></i>
+                                Buscar Películas Compatíveis
+                            </h3>
+                        </div>
+                        
+                        <div class="search-container">
+                            <input type="text" id="filmSearchInput" class="search-input" 
+                                   placeholder="Digite o modelo do celular (ex: A22, iPhone 11, Moto G52...)"
+                                   onkeypress="if(event.key==='Enter') searchFilms()">
+                            <button class="search-btn" style="background: #8b5cf6;" onclick="searchFilms()" id="filmSearchBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+
+                        <div id="filmResults" class="search-results hidden"></div>
+
+                        <div style="padding: 16px; background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 12px; margin-top: 20px;">
+                            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #a855f7; border-radius: 50%; margin-top: 2px; flex-shrink: 0;"></div>
+                                <div>
+                                    <h4 style="color: #c4b5fd; font-weight: 500; font-size: 14px;">💡 Como usar</h4>
+                                    <p style="color: #ddd6fe; font-size: 12px; margin-top: 4px;">
+                                        Digite o modelo do celular para encontrar quais películas são compatíveis. Ex: "A22", "iPhone 11", "Moto G52"
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://fqlhvsylnisuqgxmxrcr.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxbGh2c3lsbmlzdXFneG14cmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0ODI2NTgsImV4cCI6MjA2OTA1ODY1OH0.Kcz3PYp8b7LDSjbsQQkEO0DX44lFX1bCNGR1VxtO-cs';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Estados globais
+        let currentUser = null;
+        let isLoginMode = true;
+        let isLoading = false;
+
+        // Dados iniciais
+        const initialDatabase = [
+            { produto: "DISPLAY SAM A10 / A105 M10 / M105 (ORG C/ ARO)", preco: 90.0, disponivel: true },
+            { produto: "DISPLAY SAM A10 / A105 M10 / M105 (S/ ARO)", preco: 70.0, disponivel: true },
+            { produto: "DISPLAY SAM A20 / A205 (OLED C/ ARO)", preco: 170.0, disponivel: true },
+            { produto: "DISPLAY SAM A32 4G / A325 (OLED C/ ARO)", preco: 195.0, disponivel: true },
+            { produto: "DISPLAY SAM A34 5G / A346 (ORG NACIONAL PRETO)", preco: 599.0, disponivel: true },
+            { produto: "DISPLAY IPHONE 11 (OLED C/ ARO)", preco: 180.0, disponivel: true },
+            { produto: "DISPLAY IPHONE 12 (OLED C/ ARO)", preco: 220.0, disponivel: true },
+            { produto: "DISPLAY MOTO G10 / G20 / G30 (C/ ARO ORG)", preco: 100.0, disponivel: true },
+            { produto: "DISPLAY XIAOMI REDMI NOTE 11 4G (C/ ARO AMOLED WEFIX)", preco: 260.0, disponivel: true },
+            { produto: "DISPLAY REALME C35 (C/ ARO)", preco: 140.0, disponivel: true },
+        ];
+
+        const filmsDatabase = [
+            { model: "SAMSUNG A22", compatible: ["SAMSUNG M32", "A33", "M31", "A32 4G"] },
+            { model: "SAMSUNG M32", compatible: ["SAMSUNG A22", "M22"] },
+            { model: "LG K52", compatible: ["K62", "MOTO G51", "A11", "MOTO ONE FUSION", "POCO F3", "XIAOMI MI 11 LIGTH", "MOTO G71", "XIAOMI MI 11", "REALME C6 PRO", "A11"] },
+            { model: "MOTO EDGE 30 PRO", compatible: ["A52", "MOTO G8", "MOTO G52", "A11", "MOTO G41", "XIAOMI 11 LITE", "POCO M3", "REALME C6 PRO"] },
+            { model: "M51", compatible: ["REALME C6 PRO", "MOTO G 71", "A11", "A71", "A21S", "A21", "S20 FE", "A52", "G62", "REDMI NOTE 10 PRO", "A73"] },
+            { model: "XIAOMI MI 10 T", compatible: ["A73", "A11", "POCO F3", "MOTO G 71", "MOTO G41", "REALME C6 PRO", "MOTO G52", "A21S", "A21", "A52"] },
+            { model: "XIAOMI REDMI NOTE 10 PRO", compatible: ["REALME C6 PRO", "G71", "M51", "A21S", "A21", "A11", "A52", "MOTO ONE FUSION", "XIAOMI MI 11i", "REDMI NOTE 10"] },
+            { model: "IPHONE X", compatible: ["XS", "11 PRO", "A01 CORE"] },
+            { model: "IPHONE XS MAX", compatible: ["11 PRO MAX"] },
+            { model: "IPHONE XR", compatible: ["11", "LG K8 PLUS"] },
+        ];
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            updateCalculation();
+            
+            // Event listeners
+            document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
+            
+            // Listener para mudanças de autenticação
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    currentUser = session.user;
+                    showApp();
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    showAuth();
+                }
+            });
+        });
+
+        // Verificar autenticação
+        async function checkAuth() {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error) {
+                    console.error('Erro ao verificar autenticação:', error);
+                    showAuth();
+                } else if (user) {
+                    currentUser = user;
+                    showApp();
+                } else {
+                    showAuth();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar autenticação:', error);
+                showAuth();
+            }
+        }
+
+        // Mostrar tela de autenticação
+        function showAuth() {
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('appScreen').classList.remove('active');
+        }
+
+        // Mostrar aplicação
+        function showApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('appScreen').classList.add('active');
+            document.getElementById('userEmail').textContent = currentUser.email;
+        }
+
+        // Toggle password visibility
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // Switch entre login e cadastro
+        function switchAuthMode() {
+            isLoginMode = !isLoginMode;
+            
+            const authTitle = document.getElementById('authTitle');
+            const authSubtitle = document.getElementById('authSubtitle');
+            const nameGroup = document.getElementById('nameGroup');
+            const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+            const authSubmitText = document.getElementById('authSubmitText');
+            const switchText = document.getElementById('switchText');
+            const switchBtn = document.getElementById('switchBtn');
+            
+            if (isLoginMode) {
+                authTitle.textContent = 'Bem-vindo de volta';
+                authSubtitle.textContent = 'Entre na sua conta para continuar';
+                nameGroup.classList.add('hidden');
+                confirmPasswordGroup.classList.add('hidden');
+                authSubmitText.textContent = 'Entrar';
+                switchText.textContent = 'Não tem uma conta?';
+                switchBtn.textContent = 'Criar conta';
+            } else {
+                authTitle.textContent = 'Criar conta';
+                authSubtitle.textContent = 'Crie sua conta para começar a usar';
+                nameGroup.classList.remove('hidden');
+                confirmPasswordGroup.classList.remove('hidden');
+                authSubmitText.textContent = 'Criar conta';
+                switchText.textContent = 'Já tem uma conta?';
+                switchBtn.textContent = 'Fazer login';
+            }
+            
+            // Limpar formulário e alertas
+            document.getElementById('authForm').reset();
+            hideAlert();
+        }
+
+        // Handle auth form submit
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            
+            if (isLoading) return;
+            
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const name = document.getElementById('nameInput').value;
+            const confirmPassword = document.getElementById('confirmPasswordInput').value;
+            
+            // Validações
+            if (!email || !password) {
+                showAlert('Por favor, preencha todos os campos!', 'error');
+                return;
+            }
+            
+            if (!isLoginMode) {
+                if (!name || !confirmPassword) {
+                    showAlert('Por favor, preencha todos os campos!', 'error');
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    showAlert('As senhas não coincidem!', 'error');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    showAlert('A senha deve ter pelo menos 6 caracteres!', 'error');
+                    return;
+                }
+            }
+            
+            setLoading(true);
+            hideAlert();
+            
+            try {
+                if (isLoginMode) {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email,
+                        password,
+                    });
+                    
+                    if (error) {
+                        showAlert(error.message, 'error');
+                    } else {
+                        showAlert('Login realizado com sucesso!', 'success');
+                    }
+                } else {
+                    const { data, error } = await supabase.auth.signUp({
+                        email,
+                        password,
+                        options: {
+                            data: {
+                                full_name: name,
+                            },
+                        },
+                    });
+                    
+                    if (error) {
+                        showAlert(error.message, 'error');
+                    } else {
+                        showAlert('Conta criada com sucesso! Verifique seu email para confirmar a conta.', 'success');
+                        document.getElementById('authForm').reset();
+                    }
+                }
+            } catch (error) {
+                showAlert('Erro inesperado. Tente novamente.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                    console.error('Erro no logout:', error);
+                }
+            } catch (error) {
+                console.error('Erro no logout:', error);
+            }
+        }
+
+        // Mostrar/esconder loading
+        function setLoading(loading) {
+            isLoading = loading;
+            const submitBtn = document.getElementById('authSubmitBtn');
+            const submitText = document.getElementById('authSubmitText');
+            
+            if (loading) {
+                submitBtn.disabled = true;
+                submitText.innerHTML = '<div class="spinner"></div> ' + (isLoginMode ? 'Entrando...' : 'Criando conta...');
+            } else {
+                submitBtn.disabled = false;
+                submitText.textContent = isLoginMode ? 'Entrar' : 'Criar conta';
+            }
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('authAlert');
+            const icon = type === 'error' ? 'fas fa-times-circle' : 'fas fa-check-circle';
+            
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `<i class="${icon}"></i> ${message}`;
+            alertDiv.classList.remove('hidden');
+        }
+
+        // Esconder alerta
+        function hideAlert() {
+            document.getElementById('authAlert').classList.add('hidden');
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            // Remover active de todos os botões e conteúdos
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Adicionar active ao botão e conteúdo selecionado
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Funções da calculadora
+        function getSuggestedMargin(valor) {
+            if (valor <= 100) return 65;
+            if (valor <= 200) return 70;
+            if (valor <= 300) return 75;
+            if (valor <= 400) return 80;
+            if (valor <= 500) return 95;
+            return 100;
+        }
+
+        function getSuggestedLabor(valor) {
+            if (valor <= 100) return "R$ 80-120 (Simples)";
+            if (valor <= 200) return "R$ 100-140 (Médio)";
+            if (valor <= 300) return "R$ 120-160 (Médio)";
+            if (valor <= 400) return "R$ 140-180 (Complexo)";
+            if (valor <= 500) return "R$ 160-200 (Complexo)";
+            return "R$ 180-250 (Premium)";
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+            }).format(value);
+        }
+
+        function updateCalculation() {
+            const valorPeca = parseFloat(document.getElementById('valorPeca').value) || 0;
+            const margemLucro = parseFloat(document.getElementById('margemLucro').value) || 0;
+            const frete = parseFloat(document.getElementById('frete').value) || 0;
+            const maoDeObra = parseFloat(document.getElementById('maoDeObra').value) || 0;
+            const taxaMaquina = parseFloat(document.getElementById('taxaMaquina').value) || 0;
+            const imposto = parseFloat(document.getElementById('imposto').value) || 0;
+
+            // Atualizar sugestões
+            document.getElementById('suggestedMargin').textContent = `(Sugerido: ${getSuggestedMargin(valorPeca)}%)`;
+            document.getElementById('suggestedLabor').textContent = `(${getSuggestedLabor(valorPeca)})`;
+
+            // Calcular valores
+            const custoTotal = valorPeca + frete + (valorPeca * imposto / 100);
+            const aVista = custoTotal * (1 + margemLucro / 100) + maoDeObra;
+            const noCartao = aVista * (1 + taxaMaquina / 100);
+            const diferenca = noCartao - aVista;
+
+            // Atualizar interface
+            document.getElementById('custoTotal').textContent = formatCurrency(custoTotal);
+            document.getElementById('valorVista').textContent = formatCurrency(aVista);
+            document.getElementById('valorCartao').textContent = formatCurrency(noCartao);
+            document.getElementById('diferenca').textContent = formatCurrency(diferenca);
+        }
+
+        // Buscar preços
+        async function searchPrices() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                alert('Por favor, digite o nome da peça!');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<div class="spinner"></div>';
+
+            // Simular delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const foundProducts = initialDatabase.filter(product =>
+                product.produto.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            displaySearchResults(foundProducts, searchTerm);
+
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+        }
+
+        function displaySearchResults(products, searchTerm) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (products.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div style="padding: 16px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <i class="fas fa-times-circle" style="color: #f87171;"></i>
+                            <h4 style="color: white; font-weight: 500;">Não encontramos "${searchTerm}"</h4>
+                        </div>
+                        <button class="btn btn-primary mt-4" onclick="addNewProduct('${searchTerm}')">
+                            <i class="fas fa-plus"></i>
+                            Adicionar Nova Peça
+                        </button>
+                    </div>
+                `;
+            } else {
+                let html = `
+                    <div style="padding: 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                            <h4 style="color: white; font-weight: 500;">Encontrados ${products.length} produtos para "${searchTerm}"</h4>
+                        </div>
+                    </div>
+                    <div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">
+                `;
+
+                products.forEach(product => {
+                    const statusIcon = product.disponivel ? 'fas fa-check-circle' : 'fas fa-times-circle';
+                    const statusColor = product.disponivel ? '#10b981' : '#ef4444';
+                    const statusText = product.disponivel ? 'Disponível' : 'Não disponível';
+
+                    html += `
+                        <div class="product-item">
+                            <div class="product-info">
+                                <h5>${product.produto}</h5>
+                                <div class="product-status">
+                                    <i class="${statusIcon}" style="color: ${statusColor};"></i>
+                                    <span style="color: ${statusColor};">${statusText}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="product-price">${formatCurrency(product.preco)}</span>
+                                <button style="background: none; border: none; color: #9ca3af; cursor: pointer;" onclick="editProduct('${product.produto}', ${product.preco})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    </div>
+                    <button class="btn" style="background: #10b981; width: 100%;" onclick="applyAveragePrice(${JSON.stringify(products).replace(/"/g, '&quot;')})">
+                        Usar Preço Médio dos Produtos Encontrados
+                    </button>
+                `;
+            }
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function applyAveragePrice(products) {
+            const availableProducts = products.filter(p => p.disponivel);
+            let average;
+
+            if (availableProducts.length > 0) {
+                average = availableProducts.reduce((sum, product) => sum + product.preco, 0) / availableProducts.length;
+            } else {
+                average = products.reduce((sum, product) => sum + product.preco, 0) / products.length;
+            }
+
+            const roundedAverage = Math.round(average * 100) / 100;
+            document.getElementById('valorPeca').value = roundedAverage;
+            document.getElementById('margemLucro').value = getSuggestedMargin(roundedAverage);
+            
+            updateCalculation();
+
+            // Limpar busca
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        // Buscar películas
+        async function searchFilms() {
+            const searchTerm = document.getElementById('filmSearchInput').value.trim();
+            if (!searchTerm) {
+                alert('Por favor, digite o modelo do celular!');
+                return;
+            }
+
+            const searchBtn = document.getElementById('filmSearchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<div class="spinner"></div>';
+
+            // Simular delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const foundFilms = filmsDatabase.filter(film =>
+                film.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                film.compatible.some(comp => comp.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+
+            displayFilmResults(foundFilms, searchTerm);
+
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+        }
+
+        function displayFilmResults(films, searchTerm) {
+            const resultsDiv = document.getElementById('filmResults');
+            
+            if (films.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div style="padding: 16px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <i class="fas fa-times-circle" style="color: #f87171;"></i>
+                            <h4 style="color: white; font-weight: 500;">Nenhuma compatibilidade encontrada para "${searchTerm}"</h4>
+                        </div>
+                        <p style="color: #9ca3af; font-size: 14px; margin-top: 8px;">
+                            Tente buscar por outro modelo ou verifique a grafia. Ex: "A22", "iPhone 11", "Moto G52"
+                        </p>
+                    </div>
+                `;
+            } else {
+                let html = `
+                    <div style="padding: 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                            <h4 style="color: white; font-weight: 500;">Encontradas ${films.length} compatibilidades para "${searchTerm}"</h4>
+                        </div>
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                `;
+
+                films.forEach(film => {
+                    html += `
+                        <div style="background: rgba(31, 41, 55, 0.8); padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #8b5cf6;">
+                            <div style="margin-bottom: 12px;">
+                                <h5 style="color: white; font-weight: 600; font-size: 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-mobile-alt" style="color: #a855f7;"></i>
+                                    ${film.model}
+                                </h5>
+                                <p style="color: #9ca3af; font-size: 14px; margin-bottom: 12px;">Película compatível com:</p>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                `;
+
+                    film.compatible.forEach(compatible => {
+                        html += `
+                            <span style="display: inline-block; padding: 4px 12px; background: rgba(147, 51, 234, 0.2); color: #ddd6fe; border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                ${compatible}
+                            </span>
+                        `;
+                    });
+
+                    html += `
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        // Gerar PDF
+        function generatePDF() {
+            const nomeEmpresa = prompt('Digite o nome da sua empresa:');
+            if (!nomeEmpresa) return;
+
+            const servico = prompt('Descreva o serviço que será prestado:');
+            if (!servico) return;
+
+            const valorVista = document.getElementById('valorVista').textContent;
+            const valorCartao = document.getElementById('valorCartao').textContent;
+
+            const dataAtual = new Date().toLocaleDateString('pt-BR');
+            const dataValidade = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR');
+
+            const pdfContent = `
+ORÇAMENTO - ${nomeEmpresa}
+
+Data: ${dataAtual}
+Válido até: ${dataValidade}
+
+Serviço: ${servico}
+
+Valor à vista: ${valorVista}
+Valor no cartão: ${valorCartao}
+
+Agradecemos pela confiança!
+            `;
+
+            // Criar um blob com o conteúdo e fazer download
+            const blob = new Blob([pdfContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Orçamento_${nomeEmpresa.replace(/\s+/g, '_')}_${dataAtual.replace(/\//g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Adicionar novo produto
+        function addNewProduct(searchTerm = '') {
+            const nome = prompt('Nome do produto:', searchTerm);
+            if (!nome) return;
+
+            const preco = prompt('Preço do produto:');
+            if (!preco || isNaN(parseFloat(preco))) return;
+
+            const precoNum = parseFloat(preco);
+            
+            // Adicionar ao banco local (em uma implementação real, salvaria no Supabase)
+            initialDatabase.push({
+                produto: nome,
+                preco: precoNum,
+                disponivel: true
+            });
+
+            // Aplicar o preço
+            document.getElementById('valorPeca').value = precoNum;
+            document.getElementById('margemLucro').value = getSuggestedMargin(precoNum);
+            updateCalculation();
+
+            // Limpar busca
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').classList.add('hidden');
+
+            alert('Produto adicionado com sucesso!');
+        }
+
+        // Editar produto
+        function editProduct(nome, precoAtual) {
+            const novoPreco = prompt('Novo preço para o produto:', precoAtual);
+            if (!novoPreco || isNaN(parseFloat(novoPreco))) return;
+
+            const precoNum = parseFloat(novoPreco);
+            
+            // Atualizar no banco local
+            const produto = initialDatabase.find(p => p.produto === nome);
+            if (produto) {
+                produto.preco = precoNum;
+            }
+
+            // Refazer a busca para atualizar os resultados
+            searchPrices();
+
+            alert('Preço atualizado com sucesso!');
+        }
+
+        // Event listeners para inputs da calculadora
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = ['valorPeca', 'margemLucro', 'frete', 'maoDeObra', 'taxaMaquina', 'imposto'];
+            inputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.addEventListener('input', updateCalculation);
+                    input.addEventListener('change', function() {
+                        if (inputId === 'valorPeca') {
+                            const valor = parseFloat(this.value) || 0;
+                            document.getElementById('margemLucro').value = getSuggestedMargin(valor);
+                        }
+                        updateCalculation();
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
